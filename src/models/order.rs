@@ -15,6 +15,8 @@ use crate::{
     util::make_nonce,
 };
 
+const DEFAULT_EXPIRATION: i64 = 90;
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct Order {
     id: Option<i32>,
@@ -288,7 +290,7 @@ impl Record<i32> for Order {
                         )),
                     &self.clone().not_after.unwrap_or(
                         chrono::DateTime::<chrono::Local>::from(std::time::SystemTime::now())
-                            .add(chrono::Duration::days(365)),
+                            .add(chrono::Duration::days(DEFAULT_EXPIRATION)),
                     ),
                     &error,
                     &self.finalized,
@@ -484,9 +486,8 @@ impl Challenge {
     }
 
     pub async fn persist_status(&mut self, tx: &Transaction<'_>) -> Result<(), SaveError> {
-        match self.id {
-            None => return Err(SaveError::Generic("save this record first".to_string())),
-            _ => {}
+        if self.id.is_none() {
+            return Err(SaveError::Generic("save this record first".to_string()));
         }
 
         if self.status == OrderStatus::Valid {
